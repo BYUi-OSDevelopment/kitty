@@ -101,11 +101,66 @@ mov es, bx			; now bx is starting point in RAM
 mov bx, 0x7e00			; set bx to end of drive (address 0x7e00)
 
 int 0x13			; load bios interrupt calls
-jmp 0x1000			; jump to the kernel
 
-BOOT_DRIVE:	db 0		; define BOOT_DRIVE label (labels are like gotos)
+enter_protected:
+    cli
+    lgdt [gdt_descriptor]
+    mov eax, cr0
+    or al, 1
+    mov cr0, eax
+    jmp (gdt_code - gdt_start):segment_switch
+
+; DATA
+gdt_start:
+    dd 0x0
+    dd 0x0
+
+gdt_code:
+    dw 0xffff
+    dw 0x0
+    db 0x0
+    db 10011010b
+    db 11001111b
+    db 0x0
+
+gdt_data:
+    dw 0xffff
+    dw 0x0
+    db 0x0
+    db 10010010b
+    db 11001111b
+    db 0x0
+
+gdt_end:
+
+gdt_descriptor:
+    dw gdt_end - gdt_start - 1
+    dd gdt_start
+
+BOOT_DRIVE:	db 0		; define BOOT_DRIVE label
 LOAD_TEXT:
-    db 'Please select a drive to boot off of:',0xA, 0xD,0xA, 0xD,'   [ ] Default Drive',0xA, 0xD,'   [ ] Floppy Drive',0xA, 0xD,'   [ ] Hard Drive', 0		; text
+    db 'Please select a drive to boot off of:',0xA, 0xD,0xA, 0xD,'   [ ] Default Drive',0xA, 0xD,'   [ ] Floppy Drive',0xA, 0xD,'   [ ] Hard Drive',0xA, 0xD
+    db ' _                    ',0xA, 0xD
+    db '| | __ _ _______ _ __ ',0xA, 0xD
+    db '| |/ _` |_  / _ \  __|',0xA, 0xD
+    db '| | (_| |/ /  __/ |   ',0xA, 0xD
+    db '|_|\__,_/___\___|_|   '
+    db 0		; text
+
+[bits 32] ; code again
+
+segment_switch:
+    mov ax, (gdt_data - gdt_start)
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    mov ebp, 0x90000
+    mov esp, ebp
+    jmp 0x1000
+
 ; the following code populates the first 512 bytes of the drive
 times 510-($-$$) db 0		; for 510 bytes minus the beginning of file, write 0
 dw 0xAA55			; magix number

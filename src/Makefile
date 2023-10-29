@@ -2,7 +2,7 @@
 
 C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c)
 HEADERS = ${C_SOURCES:.c=.h}
-OBJ = ${C_SOURCES:.c=.o cpu/interrupt.o}
+OBJ = ${C_SOURCES:.c=.o } #cpu/interrupt.o}
 CFLAGS =  -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
 
 
@@ -25,7 +25,7 @@ endif
 
 # set flags for compiler and linker (Bits and Architecture)
 ifeq ($(arch),x86_64)
-  CFLAGS += -m64 -D Bits=64
+  CFLAGS += -m64 -D Bits=64 #-mno-red-zone?
   LDFLAGS = -m elf_x86_64
   NASMFLAGS = -dBits=64
 else ifeq ($(arch),x86)
@@ -46,18 +46,18 @@ ifndef ($arch)
   $(warning arch not defined! please set target architecture)
 endif
 
-os-image.bin: x86-boot/boot-sect.bin kernel.bin #TODO add fs.bin (file system)
+os-image.bin: x86-boot/boot-sect.bin kitty.bin #TODO add fs.bin (file system)
 ifeq ($(host_os),windows)
-	copy /B boot\bootsect.bin+kernel.bin /B os-image.bin
+	copy /B x86-boot\boot-sect.bin+kitty.bin /B os-image.bin
 else ifeq ($(host_os), linux)
 	cat $^ > os-image.bin
 endif
 
 
-kernel.bin: boot/kernel_entry.o ${OBJ}
+kitty.bin: x86-boot/kernel_entry.o ${OBJ}
 	${LD} ${LDFLAGS} -o $@ -Ttext 0x1000 $^ --oformat binary
 
-kernel.elf: boot/kernel_entry.o ${OBJ}
+kitty.elf: x86-boot/kernel_entry.o ${OBJ}
 	${LD} ${LDFLAGS} -o $@ -Ttext 0x1000 $^
 
 run: os-image.bin
@@ -73,16 +73,16 @@ endif
 
 run_boot: x86-boot/boot-sect.bin
 ifeq ($(arch),x86_64)
-	qemu-system-x86_64 -fda x86-boot/boot-sect.bin
+	qemu-system-x86_64 -hda x86-boot/boot-sect.bin
 else ifeq ($(arch),x86)
-	qemu-system-i386 -fda x86-boot/boot-sect.bin
+	qemu-system-i386 -hda x86-boot/boot-sect.bin
 else ifeq ($(arch),arm64)
 	qemu-system-aarch64 x86_boot_loader/bootsect.bin
 else ifeq ($(arch),arm32)
 	qemu-system-arm x86_boot_loader/bootsect.bin
 endif
 
-debug: os-image.bin kernel.elf #needs work, change it so that a variable is added for break points
+debug: os-image.bin kitty.elf #needs work, change it so that a variable is added for break points
 	qemu-system-x86_64 -s -S -fda os-image.bin &
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -ex "break *0x7c00" -ex "break main" -ex "c" -ex "c"
 
@@ -105,9 +105,8 @@ endif
 
 clean:
 ifeq ($(host_os),windows)
-	del *.bin *.dis *.o os-image.bin *.elf
-	del kernel\*.o boot\*.bin drivers\*.o boot\*.o cpu\*.o libc\*.o
+	del /S *.bin *.dis *.o os-image.bin *.elf
 else ifeq ($(host_os), linux)
 	rm -rf *.bin *.dis *.o os-image.bin *.elf
-	rm -rf kernel/*.o boot/*.bin drivers/*.o boot/*.o cpu/*.o libc/*.o
+	rm -rf kernel/*.o x86-boot/*.bin drivers/*.o x86-boot/*.o cpu/*.o libc/*.o
 endif
