@@ -108,5 +108,5 @@ ifeq ($(host_os),windows)
 	del /S *.bin *.dis *.o os-image.bin *.elf
 else ifeq ($(host_os), linux)
 	rm -rf *.bin *.dis *.o os-image.bin *.elf
-	rm -rf kernel/*.o x86-boot/*.bin drivers/*.o x86-boot/*.o cpu/*.o libc/*.o
+	rm -rf kernel/*.o x86-boot/*.bin x86-boot/*.o
 endif

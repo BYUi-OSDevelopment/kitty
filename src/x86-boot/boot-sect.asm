@@ -98,7 +98,7 @@ mov ch, 0			; start at cylinder 0
 mov cl, 2			; start at sector 2
 xor bx, bx			; make entire register 0s
 mov es, bx			; now bx is starting point in RAM
-mov bx, 0x7e00			; set bx to end of drive (address 0x7e00)
+mov bx, 0x1000			; set bx to end of drive (address 0x7e00)
 
 int 0x13			; load bios interrupt calls
 
@@ -106,9 +106,9 @@ enter_protected:
     cli
     lgdt [gdt_descriptor]
     mov eax, cr0
-    or al, 1
+    or al, 0x1
     mov cr0, eax
-    jmp (gdt_code - gdt_start):segment_switch
+    jmp CODE_SEG:segment_switch
 
 ; DATA
 gdt_start:
@@ -150,7 +150,7 @@ LOAD_TEXT:
 [bits 32] ; code again
 
 segment_switch:
-    mov ax, (gdt_data - gdt_start)
+    mov ax, DATA_SEG
     mov ds, ax
     mov ss, ax
     mov es, ax
@@ -160,7 +160,9 @@ segment_switch:
     mov ebp, 0x90000
     mov esp, ebp
     jmp 0x1000
-
 ; the following code populates the first 512 bytes of the drive
 times 510-($-$$) db 0		; for 510 bytes minus the beginning of file, write 0
 dw 0xAA55			; magix number
+
+CODE_SEG equ gdt_code - gdt_start
+DATA_SEG equ gdt_data - gdt_start

@@ -4,5 +4,5 @@
 
 #ifndef KITTY_KITTY_H
 #define KITTY_KITTY_H
-
+void kitty();
 #endif //KITTY_KITTY_H

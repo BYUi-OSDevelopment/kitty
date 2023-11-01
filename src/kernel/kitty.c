@@ -5,5 +5,7 @@
 #include "kitty.h"
 
 void kitty() {
-    return;
+    while (1) {
+
+    }
 }
