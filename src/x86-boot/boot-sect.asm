@@ -139,12 +139,12 @@ gdt_descriptor:
 
 BOOT_DRIVE:	db 0		; define BOOT_DRIVE label
 LOAD_TEXT:
-    db 'Please select a drive to boot off of:',0xA, 0xD,0xA, 0xD,'   [ ] Default Drive',0xA, 0xD,'   [ ] Floppy Drive',0xA, 0xD,'   [ ] Hard Drive',0xA, 0xD
-    db ' _                    ',0xA, 0xD
-    db '| | __ _ _______ _ __ ',0xA, 0xD
-    db '| |/ _` |_  / _ \  __|',0xA, 0xD
-    db '| | (_| |/ /  __/ |   ',0xA, 0xD
-    db '|_|\__,_/___\___|_|   '
+    ;db 0xA, 0xD,0xA, 0xD,'   [ ] Default Drive',0xA, 0xD,'   [ ] Floppy Drive',0xA, 0xD,'   [ ] Hard Drive',0xA, 0xD
+    ;db ' _                    ',0xA, 0xD
+    ;db '| | __ _ _______ _ __ ',0xA, 0xD
+    ;db '| |/ _` |_  / _ \  __|',0xA, 0xD
+    ;db '| | (_| |/ /  __/ |   ',0xA, 0xD
+    ;db '|_|\__,_/___\___|_|   '
     db 0		; text
 
 [bits 32] ; code again
@@ -159,7 +159,108 @@ segment_switch:
 
     mov ebp, 0x90000
     mov esp, ebp
+    in al, 0x92 ; enable A20 gate
+    or al, 2
+    out 0x92, al
+
+jump_to_kernel:
     jmp 0x1000
+
+check_for_long_mode:
+    pushfd ; begin check for CPUID
+    pushfd
+    xor dword [esp],0x00200000
+    popfd
+    pushfd
+    pop eax
+    xor eax,[esp]
+    popfd
+    xor eax, ecx
+    jz jump_to_kernel ; if CPUID doesn't exist, jump to the kernel
+    mov eax, 0x80000000
+    cpuid
+    cmp eax, 0x80000001
+    jb jump_to_kernel
+    mov eax, 0x80000001
+    cpuid
+    test edx, 1 << 29
+    jz jump_to_kernel
+
+jump_to_long_mode:
+    ; setting up paging
+    mov edi, 0x2000
+    mov cr3, edi
+    xor eax, eax
+    mov ecx, 4096
+    rep stosd
+    mov edi, cr3
+    mov dword [edi], 0x3003
+    add edi, 0x1000
+    mov dword [edi], 0x4003
+    add edi, 0x1000
+    mov dword [edi], 0x5003
+    add edi, 0x1000
+    mov ebx, 0x00000003
+    mov ecx, 512
+
+map_first_two_MB:
+    mov DWORD [edi], ebx
+    add ebx, 0x1000
+    add edi, 8
+    loop map_first_two_MB
+
+enable_PAE_paging: ;PAE specifically
+    mov eax, cr4
+    or eax, 1 << 5
+    mov cr4, eax
+
+enable_paging:
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 1 << 8
+    wrmsr
+    mov eax, cr0
+    or eax, 1 << 31
+    mov cr0, eax
+
+; Access bits
+PRESENT        equ 1 << 7
+NOT_SYS        equ 1 << 4
+EXEC           equ 1 << 3
+DC             equ 1 << 2
+RW             equ 1 << 1
+ACCESSED       equ 1 << 0
+
+; Flags bits
+GRAN_4K       equ 1 << 7
+SZ_32         equ 1 << 6
+LONG_MODE     equ 1 << 5
+
+GDT: ; 64 bit GDT, taken from https://wiki.osdev.org/Setting_Up_Long_Mode
+    .Null: equ $ - GDT
+        dq 0
+    .Code: equ $ - GDT
+        dd 0xFFFF                                   ; Limit & Base (low, bits 0-15)
+        db 0                                        ; Base (mid, bits 16-23)
+        db PRESENT | NOT_SYS | EXEC | RW            ; Access
+        db GRAN_4K | LONG_MODE | 0xF                ; Flags & Limit (high, bits 16-19)
+        db 0                                        ; Base (high, bits 24-31)
+    .Data: equ $ - GDT
+        dd 0xFFFF                                   ; Limit & Base (low, bits 0-15)
+        db 0                                        ; Base (mid, bits 16-23)
+        db PRESENT | NOT_SYS | RW                   ; Access
+        db GRAN_4K | SZ_32 | 0xF                    ; Flags & Limit (high, bits 16-19)
+        db 0                                        ; Base (high, bits 24-31)
+    .TSS: equ $ - GDT
+        dd 0x00000068
+        dd 0x00CF8900
+    .Pointer:
+        dw $ - GDT - 1
+        dq GDT
+
+lgdt [GDT.Pointer]
+jmp 0x1000 ; jump to our kernel :)
+
 ; the following code populates the first 512 bytes of the drive
 times 510-($-$$) db 0		; for 510 bytes minus the beginning of file, write 0
 dw 0xAA55			; magix number

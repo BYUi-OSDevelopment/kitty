@@ -25,7 +25,7 @@ endif
 
 # set flags for compiler and linker (Bits and Architecture)
 ifeq ($(arch),x86_64)
-  CFLAGS += -m64 -D Bits=64 #-mno-red-zone?
+  CFLAGS += -m64 -D Bits=64 # TODO -mno-red-zone?
   LDFLAGS = -m elf_x86_64
   NASMFLAGS = -dBits=64
 else ifeq ($(arch),x86)
@@ -45,6 +45,8 @@ endif
 ifndef ($arch)
   $(warning arch not defined! please set target architecture)
 endif
+
+all: os-image.bin
 
 os-image.bin: x86-boot/boot-sect.bin kitty.bin #TODO add fs.bin (file system)
 ifeq ($(host_os),windows)
@@ -82,9 +84,13 @@ else ifeq ($(arch),arm32)
 	qemu-system-arm x86_boot_loader/bootsect.bin
 endif
 
-debug: os-image.bin kitty.elf #needs work, change it so that a variable is added for break points
+debug: os-image.bin kitty.elf # TODO needs work, change it so that a variable is added for break points
+ifeq ($(host_os),windows)
+	cmd /c qemu-system-x86_64 -s -S -fda os-image.bin
+else ifeq ($(host_os), linux)
 	qemu-system-x86_64 -s -S -fda os-image.bin &
-	${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -ex "break *0x7c00" -ex "break main" -ex "c" -ex "c"
+endif
+#${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -ex "break *0x7c00" -ex "break main" -ex "c" -ex "c"
 
 %.o: %.asm
 ifeq ($(arch),x86_64)
@@ -105,8 +111,8 @@ endif
 
 clean:
 ifeq ($(host_os),windows)
-	del /S *.bin *.dis *.o os-image.bin *.elf
+	del /S *.bin *.o *.elf
 else ifeq ($(host_os), linux)
-	rm -rf *.bin *.dis *.o os-image.bin *.elf
+	rm -rf *.bin *.o *.elf
 	rm -rf kernel/*.o x86-boot/*.bin x86-boot/*.o
 endif
