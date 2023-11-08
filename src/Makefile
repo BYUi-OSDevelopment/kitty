@@ -1,8 +1,8 @@
 # must provide arch={x86/x86_64/arm32/arm64}
 
-C_SOURCES = $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c)
+C_SOURCES = $(wildcard kernel/*.c driver/*/*.c)
 HEADERS = ${C_SOURCES:.c=.h}
-OBJ = ${C_SOURCES:.c=.o } #cpu/interrupt.o}
+OBJ = ${C_SOURCES:.c=.o }
 CFLAGS =  -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
 
 
@@ -84,13 +84,13 @@ else ifeq ($(arch),arm32)
 	qemu-system-arm x86_boot_loader/bootsect.bin
 endif
 
-debug: os-image.bin kitty.elf # TODO needs work, change it so that a variable is added for break points
-ifeq ($(host_os),windows)
-	cmd /c qemu-system-x86_64 -s -S -fda os-image.bin
-else ifeq ($(host_os), linux)
-	qemu-system-x86_64 -s -S -fda os-image.bin &
-endif
-#${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -ex "break *0x7c00" -ex "break main" -ex "c" -ex "c"
+#debug: os-image.bin kitty.elf # TODO needs work, change it so that a variable is added for break points
+#ifeq ($(host_os),windows)
+#	cmd /c qemu-system-x86_64 -s -S -fda os-image.bin
+#else ifeq ($(host_os), linux)
+#	qemu-system-x86_64 -s -S -fda os-image.bin &
+#endif
+##${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -ex "break *0x7c00" -ex "break main" -ex "c" -ex "c"
 
 %.o: %.asm
 ifeq ($(arch),x86_64)
