@@ -1,6 +1,6 @@
 # must provide arch={x86/x86_64/arm32/arm64}
 
-C_SOURCES = $(wildcard kernel/*.c driver/*/*.c)
+C_SOURCES = $(wildcard kernel/*.c driver/video/*.c)
 HEADERS = ${C_SOURCES:.c=.h}
 OBJ = ${C_SOURCES:.c=.o }
 CFLAGS =  -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
@@ -25,7 +25,7 @@ endif
 
 # set flags for compiler and linker (Bits and Architecture)
 ifeq ($(arch),x86_64)
-  CFLAGS += -m64 -D Bits=64 # TODO -mno-red-zone?
+  CFLAGS += -march=x86-64 -D Bits=64 -mno-red-zone
   LDFLAGS = -m elf_x86_64
   NASMFLAGS = -dBits=64
 else ifeq ($(arch),x86)
@@ -57,10 +57,10 @@ endif
 
 
 kitty.bin: x86-boot/kernel_entry.o ${OBJ}
-	${LD} ${LDFLAGS} -o $@ -Ttext 0x1000 $^ --oformat binary
+	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^ --oformat binary
 
 kitty.elf: x86-boot/kernel_entry.o ${OBJ}
-	${LD} ${LDFLAGS} -o $@ -Ttext 0x1000 $^
+	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^
 
 run: os-image.bin
 ifeq ($(arch),x86_64)

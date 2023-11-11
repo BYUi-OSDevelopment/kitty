@@ -4,5 +4,6 @@
 
 #ifndef KITTY_KITTY_H
 #define KITTY_KITTY_H
-void kitty();
+
+_Noreturn void kitty();
 #endif //KITTY_KITTY_H

@@ -1,5 +1,5 @@
-global _start
-[bits 32]
+global _start;
+[bits 64]
 _start:
     [extern kitty]
     call kitty

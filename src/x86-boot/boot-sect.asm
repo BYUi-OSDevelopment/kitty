@@ -14,7 +14,7 @@ load_bootsect: ; load the remaining part of the boot sector (just the text we pr
     mov ds, ax			; set data segment (ds) to value of ax (0)
     cld				; clear direction flag
     mov ah, 0x02			; read sectors from drive
-    mov al, 63			; specify numbers of sectors in decimal
+    mov al, 1			; specify numbers of sectors in decimal
     mov dh, 0			; specify drive head
     mov ch, 0			; start at cylinder 0
     mov cl, 2			; start at sector 2
@@ -120,10 +120,10 @@ load_kernel:
     jmp continue_copy
     continue_copy:			; specify drive
     mov ch, 0			; start at cylinder 0
-    mov cl, 2			; start at sector 2
+    mov cl, 3			; start at sector 2
     xor bx, bx			; make entire register 0s
     mov es, bx			; now bx is starting point in RAM
-    mov bx, 0x1000			; set bx to end of drive (address 0x7e00)
+    mov bx, 0x8000			; set bx to end of drive (address 0x7e00)
 
     int 0x13			; load bios interrupt calls
 
@@ -179,9 +179,6 @@ segment_switch:
     in al, 0x92 ; enable A20 gate
     or al, 2
     out 0x92, al
-
-jump_to_kernel:
-    jmp 0x1000
 
 check_for_long_mode:
     pushfd ; begin check for CPUID
@@ -239,7 +236,9 @@ enable_paging:
     mov eax, cr0
     or eax, 1 << 31
     mov cr0, eax
-
+lgdt [GDT.Pointer]
+jump_to_kernel:
+    jmp 0x8000 ; jump to our kernel :)
 ; Access bits
 PRESENT        equ 1 << 7
 NOT_SYS        equ 1 << 4
@@ -275,9 +274,6 @@ GDT: ; 64 bit GDT, taken from https://wiki.osdev.org/Setting_Up_Long_Mode
         dw $ - GDT - 1
         dq GDT
 
-lgdt [GDT.Pointer]
-jmp 0x1000 ; jump to our kernel :)
-
 ; the following code populates the first 512 bytes of the drive
 times 510-($-$$) db 0		; for 510 bytes minus the beginning of file, write 0
 dw 0xAA55			; magix number
@@ -292,3 +288,5 @@ LOAD_TEXT:
 
 CODE_SEG equ gdt_code - gdt_start
 DATA_SEG equ gdt_data - gdt_start
+
+times 512-($-LOAD_TEXT) db 0
