@@ -1,9 +1,17 @@
 # kitty
 The kitty kernel, maintained by BYUi students
 
-### Building
-please put these precompiled binaries (x86_64) into your path: https://github.com/lordmilko/i686-elf-tools/releases/tag/7.1.0 
+## Building
 
+Requisites:
+- If on windows, Put these precompiled binaries (x86_64) into your path: https://github.com/lordmilko/i686-elf-tools/releases/tag/13.2.0
+- Install make
+- Install nasm
+- Install qemu
+
+Make sure that all of the above software is accessible through your shell (put everything in path!)
+
+Run this in the src directory:
 ```make run arch=x86```
 
 ## Other components included in this repository
