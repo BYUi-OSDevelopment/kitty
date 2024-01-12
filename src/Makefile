@@ -3,7 +3,7 @@
 C_SOURCES = $(wildcard kernel/*.c driver/video/*.c)
 HEADERS = ${C_SOURCES:.c=.h}
 OBJ = ${C_SOURCES:.c=.o }
-CFLAGS =  -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
+CFLAGS = -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
 
 
 ifeq ($(OS),Windows_NT)
