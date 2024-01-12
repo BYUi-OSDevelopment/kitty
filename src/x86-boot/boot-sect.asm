@@ -1,292 +1,238 @@
-; kitty kernel boot sector file
-;
-; Authors: 	BYU-I OS development team
-; Git:		https://github.com/BYUi-OSDevelopment/kitty/
-; Date:		2023-10-24
+%define FREE_SPACE 0x9000
+ 
+[org 0x7C00]
+[bits 16]
+ 
+Main:
+    ; A20 gate
+    in al, 0x92
+    test al, 2
+    jnz after
+    or al, 2
+    and al, 0xFE
+    out 0x92, al
+    after:
 
-[org 0x7c00]			; boot sector starts at address 0x7c00
-
-mov [BOOT_DRIVE], dl		; set boot drive to DL
-
-
-load_bootsect: ; load the remaining part of the boot sector (just the text we print) because it's too large to fit in 512 bytes!
-    xor ax, ax			; set ax to 0
-    mov ds, ax			; set data segment (ds) to value of ax (0)
-    cld				; clear direction flag
-    mov ah, 0x02			; read sectors from drive
-    mov al, 1			; specify numbers of sectors in decimal
-    mov dh, 0			; specify drive head
-    mov ch, 0			; start at cylinder 0
-    mov cl, 2			; start at sector 2
-    xor bx, bx			; make entire register 0s
-    mov es, bx			; now bx is starting point in RAM
-    mov bx, 0x7e01			; set bx to end of drive (address 0x7e00)
-
-    int 0x13			; load bios interrupt calls
-
-mov cl, 0
-
-; clears the screen, sets cursor position + page number
-print_clear:
-    mov ah, 0x00
-    mov al, 0x03
-    int 0x10
-    mov ah, 0x02
-    mov bh, 0
+    ; load kernel
+    mov ah, 0x2
+    mov al, 4
+    mov ch, 0
+    mov cl, 2
     mov dh, 0
-    mov dl, 0
-    int 0x10
-mov bx, LOAD_TEXT
-print_drive_menu: ; put address of LOAD_TEXT into bx!
-    mov ah, 0x0e
-    mov al, [bx]
-    int 0x10
-    inc bx
-    cmp [bx], byte 0
-    jne print_drive_menu
-check_and_print_x:
-    cmp cl, byte 0 ; figure out what is selected, and put the cursor in the right place
-    jne check_1
-    mov dh, 2
-    jmp print_x
-    check_1:
-    cmp cl, byte 1
-    jne check_2
-    mov dh, 3
-    jmp print_x
-    check_2:
-    mov dh, 4
-    print_x:
-    mov ah, 0x02
-    mov bh, 0
-    mov dl, 4
-    int 0x10
-    mov ah, 0x0e
-    mov al, 'X'
-    int 0x10
-    jmp get_input
-get_input:
-    mov ah, 0x00
-    int 0x16
-    cmp ah, 0x48
-    je move_up
-    cmp ah, 0x50
-    je move_down
-    cmp ah, 0x1C
-    je load_kernel
-move_up:
-    cmp cl, 0
-    je get_input
-    dec cl
-    jmp clear_x
-move_down:
-    cmp cl, 2
-    je get_input
-    inc cl
-    jmp clear_x
-clear_x:
-    mov ah, 0x02
-    mov bh, 0
-    mov dl, 4
-    int 0x10
-    mov ah, 0x0e
-    mov al, ' '
-    int 0x10
-    jmp check_and_print_x
-; start boot process
+    xor bx, bx
+    mov es, bx
+    mov bx, 0x8000
+    int 0x13
 
-load_kernel:
-    xor ax, ax			; set ax to 0
-    mov ds, ax			; set data segment (ds) to value of ax (0)
-    cld				; clear direction flag
-    mov ah, 0x02			; read sectors from drive
-    mov al, 63			; specify numbers of sectors in decimal
-    mov dh, 0			; specify drive head
-
-    cmp cl, byte 0
-    je default_drive_set
-    cmp cl, byte 1
-    je floppy_drive_set
-    cmp cl, byte 2
-    je hard_drive_set
-    default_drive_set:
-    mov dl, [BOOT_DRIVE]
-    jmp continue_copy
-    floppy_drive_set:
-    mov dl, 0x00
-    jmp continue_copy
-    hard_drive_set:
-    mov dl, 0x80
-    jmp continue_copy
-    continue_copy:			; specify drive
-    mov ch, 0			; start at cylinder 0
-    mov cl, 3			; start at sector 2
-    xor bx, bx			; make entire register 0s
-    mov es, bx			; now bx is starting point in RAM
-    mov bx, 0x8000			; set bx to end of drive (address 0x7e00)
-
-    int 0x13			; load bios interrupt calls
-
-enter_protected:
-    cli
-    lgdt [gdt_descriptor]
-    mov eax, cr0
-    or al, 0x1
-    mov cr0, eax
-    jmp CODE_SEG:segment_switch
-
-; DATA
-gdt_start:
-    dd 0x0
-    dd 0x0
-
-gdt_code:
-    dw 0xffff
-    dw 0x0
-    db 0x0
-    db 10011010b
-    db 11001111b
-    db 0x0
-
-gdt_data:
-    dw 0xffff
-    dw 0x0
-    db 0x0
-    db 10010010b
-    db 11001111b
-    db 0x0
-
-gdt_end:
-
-gdt_descriptor:
-    dw gdt_end - gdt_start - 1
-    dd gdt_start
-
-BOOT_DRIVE:	db 0		; define BOOT_DRIVE label
-
-[bits 32] ; code again
-
-segment_switch:
-    mov ax, DATA_SEG
-    mov ds, ax
+    jmp 0x0000:.FlushCS ; fix initial jump.
+ 
+.FlushCS:   
+    xor ax, ax
     mov ss, ax
+    mov sp, Main
+    mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
+    cld
+    call CheckCPU
+    jc .NoLongMode
+    mov edi, FREE_SPACE
+    jmp SwitchToLongMode
 
-    mov ebp, 0x90000
-    mov esp, ebp
-    in al, 0x92 ; enable A20 gate
-    or al, 2
-    out 0x92, al
+[bits 64]
+.Long:
+    hlt
+    jmp .Long
+[bits 16]
 
-check_for_long_mode:
-    pushfd ; begin check for CPUID
-    pushfd
-    xor dword [esp],0x00200000
-    popfd
-    pushfd
-    pop eax
-    xor eax,[esp]
-    popfd
-    xor eax, ecx
-    jz jump_to_kernel ; if CPUID doesn't exist, jump to the kernel
-    mov eax, 0x80000000
-    cpuid
-    cmp eax, 0x80000001
-    jb jump_to_kernel
-    mov eax, 0x80000001
-    cpuid
-    test edx, 1 << 29
-    jz jump_to_kernel
+.NoLongMode:
+    mov si, NoLongMode
+    call Print
+    
 
-jump_to_long_mode:
-    ; setting up paging
-    mov edi, 0x2000
-    mov cr3, edi
+.Die:
+    hlt
+    jmp .Die
+
+
+%define PAGE_PRESENT    (1 << 0)
+%define PAGE_WRITE      (1 << 1)
+
+%define CODE_SEG     0x0008
+%define DATA_SEG     0x0010
+
+ALIGN 4
+IDT:
+    .Length       dw 0
+    .Base         dd 0
+
+SwitchToLongMode:
+    push di
+    mov ecx, 0x1000
     xor eax, eax
-    mov ecx, 4096
+    cld
     rep stosd
-    mov edi, cr3
-    mov dword [edi], 0x3003
-    add edi, 0x1000
-    mov dword [edi], 0x4003
-    add edi, 0x1000
-    mov dword [edi], 0x5003
-    add edi, 0x1000
-    mov ebx, 0x00000003
-    mov ecx, 512
+    pop di
+    lea eax, [es:di + 0x1000]
+    or eax, PAGE_PRESENT | PAGE_WRITE
+    mov [es:di], eax
 
-map_first_two_MB:
-    mov DWORD [edi], ebx
-    add ebx, 0x1000
-    add edi, 8
-    loop map_first_two_MB
 
-enable_PAE_paging: ;PAE specifically
-    mov eax, cr4
-    or eax, 1 << 5
+    ; Build the Page Directory Pointer Table.
+    lea eax, [es:di + 0x2000]         ; Put the address of the Page Directory in to EAX.
+    or eax, PAGE_PRESENT | PAGE_WRITE ; Or EAX with the flags - present flag, writable flag.
+    mov [es:di + 0x1000], eax         ; Store the value of EAX as the first PDPTE.
+
+
+    ; Build the Page Directory.
+    lea eax, [es:di + 0x3000]         ; Put the address of the Page Table in to EAX.
+    or eax, PAGE_PRESENT | PAGE_WRITE ; Or EAX with the flags - present flag, writeable flag.
+    mov [es:di + 0x2000], eax         ; Store to value of EAX as the first PDE.
+
+
+    push di                           ; Save DI for the time being.
+    lea di, [di + 0x3000]             ; Point DI to the page table.
+    mov eax, PAGE_PRESENT | PAGE_WRITE    ; Move the flags into EAX - and point it to 0x0000.
+
+
+    ; Build the Page Table.
+.LoopPageTable:
+    mov [es:di], eax
+    add eax, 0x1000
+    add di, 8
+    cmp eax, 0x200000                 ; If we did all 2MiB, end.
+    jb .LoopPageTable
+
+    pop di                            ; Restore DI.
+
+    ; Disable IRQs
+    mov al, 0xFF                      ; Out 0xFF to 0xA1 and 0x21 to disable all IRQs.
+    out 0xA1, al
+    out 0x21, al
+
+    nop
+    nop
+
+    lidt [IDT]                        ; Load a zero length IDT so that any NMI causes a triple fault.
+
+    ; Enter long mode.
+    mov eax, 10100000b                ; Set the PAE and PGE bit.
     mov cr4, eax
 
-enable_paging:
-    mov ecx, 0xC0000080
+    mov edx, edi                      ; Point CR3 at the PML4.
+    mov cr3, edx
+
+    mov ecx, 0xC0000080               ; Read from the EFER MSR.
     rdmsr
-    or eax, 1 << 8
+
+    or eax, 0x00000100                ; Set the LME bit.
     wrmsr
-    mov eax, cr0
-    or eax, 1 << 31
-    mov cr0, eax
-lgdt [GDT.Pointer]
-jump_to_kernel:
-    jmp 0x8000 ; jump to our kernel :)
-; Access bits
-PRESENT        equ 1 << 7
-NOT_SYS        equ 1 << 4
-EXEC           equ 1 << 3
-DC             equ 1 << 2
-RW             equ 1 << 1
-ACCESSED       equ 1 << 0
 
-; Flags bits
-GRAN_4K       equ 1 << 7
-SZ_32         equ 1 << 6
-LONG_MODE     equ 1 << 5
+    mov ebx, cr0                      ; Activate long mode -
+    or ebx,0x80000001                 ; - by enabling paging and protection simultaneously.
+    mov cr0, ebx
 
-GDT: ; 64 bit GDT, taken from https://wiki.osdev.org/Setting_Up_Long_Mode
-    .Null: equ $ - GDT
-        dq 0
-    .Code: equ $ - GDT
-        dd 0xFFFF                                   ; Limit & Base (low, bits 0-15)
-        db 0                                        ; Base (mid, bits 16-23)
-        db PRESENT | NOT_SYS | EXEC | RW            ; Access
-        db GRAN_4K | LONG_MODE | 0xF                ; Flags & Limit (high, bits 16-19)
-        db 0                                        ; Base (high, bits 24-31)
-    .Data: equ $ - GDT
-        dd 0xFFFF                                   ; Limit & Base (low, bits 0-15)
-        db 0                                        ; Base (mid, bits 16-23)
-        db PRESENT | NOT_SYS | RW                   ; Access
-        db GRAN_4K | SZ_32 | 0xF                    ; Flags & Limit (high, bits 16-19)
-        db 0                                        ; Base (high, bits 24-31)
-    .TSS: equ $ - GDT
-        dd 0x00000068
-        dd 0x00CF8900
-    .Pointer:
-        dw $ - GDT - 1
-        dq GDT
+    lgdt [GDT.Pointer]                ; Load GDT.Pointer defined below.
 
-; the following code populates the first 512 bytes of the drive
-times 510-($-$$) db 0		; for 510 bytes minus the beginning of file, write 0
-dw 0xAA55			; magix number
-LOAD_TEXT:
-    db 0xA, 0xD,0xA, 0xD,'   [ ] Default Drive',0xA, 0xD,'   [ ] Floppy Drive',0xA, 0xD,'   [ ] Hard Drive',0xA, 0xD
-    db ' _                    ',0xA, 0xD
-    db '| | __ _ _______ _ __ ',0xA, 0xD
-    db '| |/ _` |_  / _ \  __|',0xA, 0xD
-    db '| | (_| |/ /  __/ |   ',0xA, 0xD
-    db '|_|\__,_/___\___|_|   '
-    db 0		; text
+    jmp CODE_SEG:LongMode             ; Load CS with 64 bit segment and flush the instruction cache
 
-CODE_SEG equ gdt_code - gdt_start
-DATA_SEG equ gdt_data - gdt_start
 
-times 512-($-LOAD_TEXT) db 0
+    ; Global Descriptor Table
+GDT:
+.Null:
+    dq 0x0000000000000000             ; Null Descriptor - should be present.
+
+.Code:
+    dq 0x00209A0000000000             ; 64-bit code descriptor (exec/read).
+    dq 0x0000920000000000             ; 64-bit data descriptor (read/write).
+
+ALIGN 4
+    dw 0                              ; Padding to make the "address of the GDT" field aligned on a 4-byte boundary
+
+.Pointer:
+    dw $ - GDT - 1                    ; 16-bit Size (Limit) of GDT.
+    dd GDT                            ; 32-bit Base Address of GDT. (CPU will zero extend to 64-bit)
+
+
+[BITS 64]
+LongMode:
+    mov ax, DATA_SEG
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+
+
+    call 0x8000
+BITS 16
+ 
+ 
+NoLongMode db "CPU does not support long mode", 0x0A, 0x0D, 0
+ 
+ 
+; Checks whether CPU supports long mode or not.
+ 
+; Returns with carry set if CPU doesn't support long mode.
+ 
+CheckCPU:
+    ; Check whether CPUID is supported or not.
+    pushfd                            ; Get flags in EAX register.
+ 
+    pop eax
+    mov ecx, eax  
+    xor eax, 0x200000 
+    push eax 
+    popfd
+ 
+    pushfd 
+    pop eax
+    xor eax, ecx
+    shr eax, 21 
+    and eax, 1                        ; Check whether bit 21 is set or not. If EAX now contains 0, CPUID isn't supported.
+    push ecx
+    popfd 
+ 
+    test eax, eax
+    jz .NoLongMode
+ 
+    mov eax, 0x80000000   
+    cpuid                 
+ 
+    cmp eax, 0x80000001               ; Check whether extended function 0x80000001 is available are not.
+    jb .NoLongMode                    ; If not, long mode not supported.
+ 
+    mov eax, 0x80000001  
+    cpuid                 
+    test edx, 1 << 29                 ; Test if the LM-bit, is set or not.
+    jz .NoLongMode                    ; If not Long mode not supported.
+ 
+    ret
+ 
+.NoLongMode:
+    stc
+    ret
+ 
+ 
+; Prints out a message using the BIOS.
+ 
+; es:si    Address of ASCIIZ string to print.
+ 
+Print:
+    pushad
+.PrintLoop:
+    lodsb                             ; Load the value at [@es:@si] in @al.
+    test al, al                       ; If AL is the terminator character, stop printing.
+    je .PrintDone
+    mov ah, 0x0E
+    int 0x10
+    jmp .PrintLoop
+ 
+.PrintDone:
+    popad
+    ret
+times 510 - ($-$$) db 0
+dw 0xAA55
+times 512 db 0
