@@ -6,20 +6,29 @@
  *
  */
 #include <stdint.h>
+#include <stdbool.h>
 #include "vga.h"
 
-void write_string(uint8_t color, const char *string )
+void write_string(uint8_t color, uint8_t *string )
 {
-#if Bits == 32
-    uint8_t *video = (uint8_t *) 0xB8000;
-#elif Bits == 64
-    uint8_t *video = (uint8_t *) 0xB7FFE;
-#endif
-    do {
-        *video = *string;
-        string++;
-        video++;
-        *video = color;
-        video++;
-    } while ( *string != 0 );
+    uint8_t * video;
+    uint8_t * vid_col;
+
+    video = (uint8_t *) 0xb8000;
+    vid_col = (uint8_t *) 0xb8001;
+
+    *video = 'h';
+    *vid_col = color;
+    //do {
+    //    *video = *string;
+    //    string++;
+    //    video++;
+    //    *video = color;
+    //    video++;
+    //} while ( *string != 0 && string < 0xb87d0);
+
+}
+
+uint8_t inline get_vga3_color(uint8_t fore, uint8_t back) {
+    return ((back << 4) + fore);
 }

@@ -25,7 +25,7 @@ endif
 
 # set flags for compiler and linker (Bits and Architecture)
 ifeq ($(arch),x86_64)
-  CFLAGS += -march=x86-64 -D Bits=64 -mno-red-zone
+  CFLAGS += -D Bits=64 -mno-red-zone
   LDFLAGS = -m elf_x86_64
   NASMFLAGS = -dBits=64
 else ifeq ($(arch),x86)
@@ -56,15 +56,15 @@ else ifeq ($(host_os), linux)
 endif
 
 
-kitty.bin: x86-boot/kernel_entry.o ${OBJ}
+kitty.bin: kernel/kitty.o ${OBJ}
 	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^ --oformat binary
 
-kitty.elf: x86-boot/kernel_entry.o ${OBJ}
+kitty.elf: kernel/kitty.o ${OBJ}
 	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^
 
 run: os-image.bin
 ifeq ($(arch),x86_64)
-	qemu-system-x86_64 -fda os-image.bin
+	qemu-system-x86_64 -hda os-image.bin
 else ifeq ($(arch),x86)
 	qemu-system-i386 -fda os-image.bin
 else ifeq ($(arch),arm64)

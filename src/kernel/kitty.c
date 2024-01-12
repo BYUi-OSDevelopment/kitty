@@ -6,6 +6,10 @@
 #include "../driver/video/vga.h"
 
 void kitty() {
-    char* string = "VGA3 Working :)";
-    write_string(vga3_color(VGA3_GREEN, VGA3_LIGHT_BLUE), string);
+    while (1) {
+        write_string(0b00001111,"guh");
+        //write_string(vga3_color(VGA3_WHITE,VGA3_BLACK),"wow");
+
+    }
+
 }

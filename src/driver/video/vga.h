@@ -25,9 +25,9 @@
 #define VGA3_YELLOW 0b00001110
 #define VGA3_WHITE 0b00001111
 
-#define vga3_color(FORE, BACK) ((BACK << 4) + FORE) // for some reason this only works in 32 bit, i am going to lose my mind if another inconsistency like this pops up one more time
-
-void write_string(uint8_t color, const char *string );
+#define vga3_color(FORE, BACK) ((BACK << 4) + FORE)
+uint8_t get_vga3_color(uint8_t fore, uint8_t back);
+void write_string(uint8_t color, uint8_t *string );
 
 #endif //KITTY_VGA_H
 
