@@ -202,17 +202,17 @@ check_for_long_mode:
 
 jump_to_long_mode:
     ; setting up paging
-    mov edi, 0x2000
+    mov edi, 0x1000
     mov cr3, edi
     xor eax, eax
     mov ecx, 4096
     rep stosd
     mov edi, cr3
+    mov dword [edi], 0x2003
+    add edi, 0x1000
     mov dword [edi], 0x3003
     add edi, 0x1000
     mov dword [edi], 0x4003
-    add edi, 0x1000
-    mov dword [edi], 0x5003
     add edi, 0x1000
     mov ebx, 0x00000003
     mov ecx, 512
@@ -237,8 +237,7 @@ enable_paging:
     or eax, 1 << 31
     mov cr0, eax
 lgdt [GDT.Pointer]
-jump_to_kernel:
-    jmp 0x8000 ; jump to our kernel :)
+jmp GDT.Code:kernel_64
 ; Access bits
 PRESENT        equ 1 << 7
 NOT_SYS        equ 1 << 4
@@ -252,7 +251,7 @@ GRAN_4K       equ 1 << 7
 SZ_32         equ 1 << 6
 LONG_MODE     equ 1 << 5
 
-GDT: ; 64 bit GDT, taken from https://wiki.osdev.org/Setting_Up_Long_Mode
+GDT: ; 64 bit GDT, taken from https://wiki.osdev.org/Setting_Up_Long_Mode ; CC0 Licensing (Public Domain)
     .Null: equ $ - GDT
         dq 0
     .Code: equ $ - GDT
@@ -283,8 +282,21 @@ LOAD_TEXT:
     db '| | __ _ _______ _ __ ',0xA, 0xD
     db '| |/ _` |_  / _ \  __|',0xA, 0xD
     db '| | (_| |/ /  __/ |   ',0xA, 0xD
-    db '|_|\__,_/___\___|_|   '
+    db '|_|\__,_/___\___|_|'
     db 0		; text
+jump_to_kernel:
+    call 0x8000 ; jump to our kernel :)
+
+[BITS 64]
+kernel_64:
+    cli
+    mov ax, GDT.Data
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    call 0x8000
 
 CODE_SEG equ gdt_code - gdt_start
 DATA_SEG equ gdt_data - gdt_start
