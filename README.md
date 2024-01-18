@@ -24,3 +24,8 @@ Located in src/x86-boot/, a boot sector written for 32/64 bit x86.
 
 Located in src/test/fs_ext4/, this FS image contains just enough to get the operating system running by providing service files
 that the kernel loads automatically.
+
+## License
+
+The kitty kernel utilizes a GNU General Public License.
+Much of the bootloader code (under x86-boot) is CC0 license and in the public domain. 
