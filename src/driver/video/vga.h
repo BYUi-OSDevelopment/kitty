@@ -27,7 +27,7 @@
 
 #define vga3_color(FORE, BACK) ((BACK << 4) + FORE)
 uint8_t get_vga3_color(uint8_t fore, uint8_t back);
-void write_string(uint8_t color, uint8_t *string );
+void write_string(uint8_t color, char *string);
 
 #endif //KITTY_VGA_H
 

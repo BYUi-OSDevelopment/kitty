@@ -7,9 +7,9 @@
 
 void kitty() {
     while (1) {
-        write_string(0b00001111,"guh");
-        //write_string(vga3_color(VGA3_WHITE,VGA3_BLACK),"wow");
+        write_string(vga3_color(VGA3_CYAN, VGA3_RED),"whwatever we wandt");
 
     }
+
 
 }
