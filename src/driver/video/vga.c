@@ -29,6 +29,9 @@ void write_string_at(uint8_t color, char *string, uint8_t x, uint8_t y) {
         video++;
     }
 }
+/*
+ * runtime function for computing the vga colors.
+ */
 uint8_t inline get_vga3_color(uint8_t fore, uint8_t back) {
     return ((back << 4) + fore);
 }
