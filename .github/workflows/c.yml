@@ -12,8 +12,7 @@ jobs:
 
     steps:
       - name: Install packages
-        run: |
-          sudo apt-get install nasm
+        run: sudo apt-get install nasm
   build:
 
     runs-on: ubuntu-latest
