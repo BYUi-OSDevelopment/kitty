@@ -1,0 +1,22 @@
+name: Build OS Images
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: make x86_64
+      working-directory: ./src
+      run: sudo apt-get install -y nasm && make os-image.bin arch=x86_64
+    - uses: actions/upload-artifact@v4
+      with:
+        name: os-image.bin
+        path: ./src/os-image.bin
