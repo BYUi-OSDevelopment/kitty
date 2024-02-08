@@ -66,7 +66,7 @@ check_and_print_x:
     int 0x10
     jmp get_input
 get_input:
-    mov ah, 0x00
+    mov ah, 0x00 ; waits until keyboard input and then redraws the screen. Moves up with any non-specified keys
     int 0x16
     cmp ah, 0x48
     je move_up
