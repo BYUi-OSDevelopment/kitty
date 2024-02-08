@@ -25,11 +25,11 @@ endif
 
 # set flags for compiler and linker (Bits and Architecture)
 ifeq ($(arch),x86_64)
-  CFLAGS += -D Bits=64 -mno-red-zone
+  CFLAGS += -D CPU=1 -mno-red-zone
   LDFLAGS = -m elf_x86_64
   NASMFLAGS = -dBits=64
 else ifeq ($(arch),x86)
-  CFLAGS += -m32 -D Bits=32
+  CFLAGS += -m32 -D CPU=2
   LDFLAGS = -m elf_i386
   NASMFLAGS = -dBits=32
 else ifeq ($(arch),arm64)
@@ -57,10 +57,10 @@ endif
 
 
 kitty.bin: kernel/kitty.o ${OBJ}
-	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^ --oformat binary
+	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^ --oformat binary --entry kitty
 
 kitty.elf: kernel/kitty.o ${OBJ}
-	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^
+	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^  --entry kitty
 
 run: os-image.bin
 ifeq ($(arch),x86_64)
