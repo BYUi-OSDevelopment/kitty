@@ -13,6 +13,8 @@ Make sure that all of the above software is accessible through your shell (put e
 
 Run this in the src directory:
 ```make run arch=x86```
+or
+```make run arch=x86_64```
 
 ## Other components included in this repository
 
