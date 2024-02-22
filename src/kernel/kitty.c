@@ -12,5 +12,8 @@ void kitty() {
 #ifdef Intel_CPU
     write_string(vga3_color(VGA3_CYAN, VGA3_RED),"Starting the Kitty Kernel...");
 #endif
+#ifdef ARM_CPU
+
+#endif
     while (1);
 }
