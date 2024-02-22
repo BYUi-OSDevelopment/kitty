@@ -5,7 +5,7 @@ The kitty kernel, maintained by BYUi students
 
 Requisites:
 - If on windows, Put these precompiled binaries (x86_64) into your path: https://github.com/lordmilko/i686-elf-tools/releases/tag/13.2.0
-- Install make
+- Install make (chocolatey or mingw for windows)
 - Install nasm
 - Install qemu
 
