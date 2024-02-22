@@ -21,7 +21,7 @@ void write_string(uint8_t color, char *string )
  */
 void write_string_at(uint8_t color, char *string, uint8_t x, uint8_t y) {
     uint8_t * video = (uint8_t *) 0xb8000 + (y * 160)  + (x * 2);
-    while ( *string != 0 && video < (uint8_t *) 0xb87d0) {
+    while ( *string != 0 && video < (uint8_t *) 0xb8FA0) {
         *video = *string;
         string++;
         video++;
