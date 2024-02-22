@@ -84,9 +84,9 @@ else ifeq ($(arch),arm32)
 	qemu-system-arm x86_boot_loader/bootsect.bin
 endif
 
-#debug: os-image.bin kitty.elf # TODO needs work, change it so that a variable is added for break points
+debug: os-image.bin kitty.elf # TODO needs work, change it so that a variable is added for break points
 #ifeq ($(host_os),windows)
-#	cmd /c qemu-system-x86_64 -s -S -fda os-image.bin
+	qemu-system-x86_64 -s -S -fda os-image.bin
 #else ifeq ($(host_os), linux)
 #	qemu-system-x86_64 -s -S -fda os-image.bin &
 #endif
