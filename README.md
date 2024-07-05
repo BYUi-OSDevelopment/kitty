@@ -29,3 +29,5 @@ that the kernel loads automatically.
 
 The kitty kernel utilizes a GNU General Public License.
 Much of the bootloader code (under x86-boot) is CC0 license and in the public domain. 
+
+Before contributing, read the notes on our organizations [main page](https://github.com/BYUi-OSDevelopment).
