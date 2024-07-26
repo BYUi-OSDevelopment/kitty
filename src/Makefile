@@ -1,8 +1,8 @@
 # must provide arch={x86/x86_64/arm32/arm64}
 
-C_SOURCES = $(wildcard kernel/*.c driver/video/*.c cpu/*.c cpu/*/*.c)
+C_SOURCES = $(wildcard kernel/*.c driver/video/*.c cpu/*.c cpu/*/*.c util/*.c)
 HEADERS = ${C_SOURCES:.c=.h}
-OBJ = ${C_SOURCES:.c=.o }
+OBJ = ${C_SOURCES:.c=.o cpu/$(arch)/interrupts.o}
 CFLAGS = -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
 
 

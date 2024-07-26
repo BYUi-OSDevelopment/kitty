@@ -274,8 +274,6 @@ static struct {
     interrupt_gate_descriptor entry_255;
 }__attribute((aligned(0x10))) __attribute__((packed)) idt; // if you complain about the IDT code, you will be banned from contributing to the kitty kernel project.
 
-void divide_by_zero();
-
 /*
  * Map a given IDT gate descriptor entry to its corresponding function (Interrupt vector to interrupt function)
  */
@@ -569,11 +567,7 @@ int count_interrupts = 0;
 
 // 0
 void divide_by_zero_interrupt() {
-    char number[12];
-    count_interrupts += 1;
-    from_int(count_interrupts, number);
-    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Divide by zero", 15, 15);
-    write_string_at(vga3_color(VGA3_WHITE, VGA3_BLACK), number, 30, 15);
+
 }
 
 // 1
@@ -613,7 +607,11 @@ void device_not_available_interrupt() {
 
 // 8
 void double_fault_interrupt() {
-
+    char number[12];
+    count_interrupts += 1;
+    from_int(count_interrupts, number);
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Divide by zero", 15, 15);
+    write_string_at(vga3_color(VGA3_WHITE, VGA3_BLACK), number, 30, 15);
 }
 
 // 9
@@ -683,9 +681,6 @@ void control_protection_exception_interrupt() {
  * All unmapped/reserved unmapped interrupts pass the calling number from the isr defined in interrupts.asm!
  */
 
-void unmapped_or_reserved_interrupt(uint64_t rdi_interrupt_number) {
-    write_string_at(vga3_color(VGA3_GREEN,VGA3_BLACK), "Unmapped Interrupt", 15, 16);
-    char number[12];
-    from_int(count_interrupts, number);
-    write_string_at(vga3_color(VGA3_WHITE, VGA3_BLACK), number, 30, 16);
+void unmapped_or_reserved_interrupt(uint64_t rdi_interrupt_number) { // TODO test this
+
 }
