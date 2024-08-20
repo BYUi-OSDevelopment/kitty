@@ -6,7 +6,6 @@
  *
  */
 #include <stdint.h>
-#include <stdbool.h>
 #include "vga.h"
 /*
  * Writes a string starting at 0,0
