@@ -5,6 +5,7 @@
 #include "idt.h"
 #include "../../driver/video/vga.h"
 #include "../../util/ascii.h"
+#include "port.h"
 
 static struct {
     uint16_t size; // One less than the size (max entry number, entries start at 0)
@@ -281,11 +282,51 @@ static struct {
 void modify_descriptor_entry(interrupt_gate_descriptor* gate_descriptor, void* function) {
     (*gate_descriptor).offset_bits_0_15 = ((uint64_t) (function)) & 0xFFFF;
     (*gate_descriptor).selector = (uint16_t) 0x08; // code is the 2nd GDT entry, see boot sector
-    (*gate_descriptor).ist_offset = 0;
+    (*gate_descriptor).ist_offset = 0x00;
     (*gate_descriptor).type_dpl_present = 0x8E;
     (*gate_descriptor).offset_bits_16_31 = ( (uint64_t) (function) >> 16) & 0xFFFF;
     (*gate_descriptor).offset_bits_32_63 = ( (uint64_t) (function) >> 32) & 0xFFFFFFFF;
     (*gate_descriptor).zeroes = 0;
+}
+
+/*
+ * Set PIC interrupt vector offset and mask
+ */
+
+#define PIC_MASTER_COMMAND 0x20
+#define PIC_SLAVE_COMMAND 0xA0
+#define PIC_MASTER_DATA (PIC_MASTER_COMMAND+1)
+#define PIC_SLAVE_DATA	(PIC_SLAVE_COMMAND+1)
+#define ICW1_ICW4 0x01
+#define ICW1_INIT 0x10
+#define ICW4_8086 0x01
+
+void set_pic_offset() {
+    // Initialize configuration mode
+    port_out_byte(PIC_MASTER_COMMAND, ICW1_INIT | ICW1_ICW4);
+    port_out_byte(0x80, 0);
+    port_out_byte(PIC_SLAVE_COMMAND, ICW1_INIT | ICW1_ICW4);
+    port_out_byte(0x80, 0);
+    // Interrupt vectors to remap to
+    port_out_byte(PIC_MASTER_DATA, 0x20);
+    port_out_byte(0x80, 0);
+    port_out_byte(PIC_SLAVE_DATA, 0x28);
+    port_out_byte(0x80, 0);
+    // Offset from each other or something I forgot
+    port_out_byte(PIC_MASTER_DATA, 4);
+    port_out_byte(0x80, 0);
+    port_out_byte(PIC_SLAVE_DATA, 2);
+    port_out_byte(0x80, 0);
+    // Mode
+    port_out_byte(PIC_MASTER_DATA, ICW4_8086);
+    port_out_byte(0x80, 0);
+    port_out_byte(PIC_SLAVE_DATA, ICW4_8086);
+    port_out_byte(0x80, 0);
+    // Masks
+    port_out_byte(PIC_MASTER_DATA, 0xFE);
+    port_out_byte(0x80, 0);
+    port_out_byte(PIC_SLAVE_DATA, 0xFE);
+    port_out_byte(0x80, 0);
 }
 
 /*
@@ -295,7 +336,7 @@ void modify_descriptor_entry(interrupt_gate_descriptor* gate_descriptor, void* f
 void init_idt() {
     // Volume 3 Chapter 6.10
     idt_descriptor.offset = (uint64_t) &idt;
-    idt_descriptor.size = 255;
+    idt_descriptor.size = 255 * 8 - 1;
     modify_descriptor_entry(&idt.entry_0, isr_0);
     modify_descriptor_entry(&idt.entry_1, isr_1);
     modify_descriptor_entry(&idt.entry_2, isr_2);
@@ -552,6 +593,7 @@ void init_idt() {
     modify_descriptor_entry(&idt.entry_253, isr_253);
     modify_descriptor_entry(&idt.entry_254, isr_254);
     modify_descriptor_entry(&idt.entry_255, isr_255);
+    set_pic_offset();
     asm volatile("lidt %0" : : "m" (idt_descriptor));
     asm volatile("sti");
 }
@@ -563,124 +605,130 @@ void init_idt() {
  * Please, maintain the order of the vectors with the routines defined below.
  */
 
-int count_interrupts = 0;
-
 // 0
 void divide_by_zero_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Divide by Zero", 15, 16);
 }
 
 // 1
 void debug_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Debug Interrupt", 15, 16);
 }
 
 // 2
 void non_maskable_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Non-Maskable", 15, 16);
 }
 
 // 3
 void breakpoint_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Breakpoint", 15, 16);
 }
 
 // 4
 void overflow_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Overflow Interrupt", 15, 16);
 }
 
 // 5
 void bound_range_exceeded_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Bound Range Exceeded", 15, 16);
 }
 
 // 6
 void invalid_opcode_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Invalid Opcode", 15, 16);
 }
 
 // 7
 void device_not_available_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Device Not Available", 15, 16);
 }
 
 // 8
 void double_fault_interrupt() {
-    char number[12];
-    count_interrupts += 1;
-    from_int(count_interrupts, number);
-    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Divide by zero", 15, 15);
-    write_string_at(vga3_color(VGA3_WHITE, VGA3_BLACK), number, 30, 15);
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Double Fault", 15, 18);
 }
 
 // 9
 void coprocessor_segment_overrun_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Coprocessor Segment Overrun", 15, 16);
 }
 
 // 10
 void invalid_tss_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Invalid TSS", 15, 16);
 }
 
 // 11
 void segment_not_present_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Segment Not Present", 15, 16);
 }
 
 // 12
 void stack_segment_fault_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "SS Fault", 15, 16);
 }
 
 // 13
 void general_protection_fault_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "GP Fault", 15, 16);
 }
 
 // 14
 void page_fault_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Page Fault", 15, 16);
 }
 
 // 16
 void floating_point_error_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Floating Point Error", 15, 16);
 }
 
 // 17
 void alignment_check_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Align Check", 15, 16);
 }
 
 // 18
 void machine_check_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Machine Check", 15, 16);
 }
 
 // 19
 void simd_floating_point_exception_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "SIMD", 15, 16);
 }
 
 // 20
 void virtualization_exception_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Virt", 15, 16);
 }
 
 // 21
 void control_protection_exception_interrupt() {
-
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "ctrl", 15, 16);
 }
 
+// 32
+int count_interrupts;
 
+void timer_interrupt() {
+    char number[12];
+    count_interrupts += 1;
+    from_int(count_interrupts, number);
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Timer", 15, 17);
+    write_string_at(vga3_color(VGA3_WHITE, VGA3_BLACK), number, 30, 17);
+}
 
 
 /*
  * All unmapped/reserved unmapped interrupts pass the calling number from the isr defined in interrupts.asm!
  */
 
-void unmapped_or_reserved_interrupt(uint64_t rdi_interrupt_number) { // TODO test this
-
+void unmapped_or_reserved_interrupt(uint64_t interrupt_vector) {
+    char number[12];
+    from_int((int) interrupt_vector, number);
+    write_string_at(vga3_color(VGA3_GREEN, VGA3_BLACK), "Unmapped", 15, 17);
+    write_string_at(vga3_color(VGA3_WHITE, VGA3_BLACK), number, 30, 17);
 }
