@@ -14,8 +14,8 @@
     push rax
     mov al, 0x20
     out 0x20, al
-    %if %1 >= 8
-        out 0x21, al
+    %if %1 >= 40
+        out 0xA0, al
     %endif
     pop rax
     iretq
@@ -34,7 +34,7 @@ isr_%1:
 [extern unmapped_or_reserved_interrupt]
 
 %macro isr_unmapped 1
-global isr_%1:
+global isr_%1
 isr_%1:
     isr_common %1
     push rdi
@@ -76,7 +76,7 @@ isr_unmapped 28
 isr_unmapped 29
 isr_unmapped 30
 isr_unmapped 31
-isr_unmapped 32
+isr_complete 32, timer_interrupt
 isr_unmapped 33
 isr_unmapped 34
 isr_unmapped 35
