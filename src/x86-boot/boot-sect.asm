@@ -285,7 +285,7 @@ LOAD_TEXT:
     db '|_|\__,_/___\___|_|'
     db 0		; text
 jump_to_kernel:
-    call 0x8000 ; jump to our kernel :)
+    call 0x8000 ; jump to our kernel :), this probably isn't right
 
 [BITS 64]
 kernel_64:
