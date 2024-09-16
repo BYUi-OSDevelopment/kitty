@@ -6,7 +6,6 @@ HEADERS = ${C_SOURCES:.c=.h}
 OBJ = ${C_SOURCES:.c=.o} ${ASM_SOURCES:.asm=.o}
 CFLAGS = -ffreestanding -fno-stack-protector -z execstack -no-pie -fno-pic
 
-
 ifeq ($(OS),Windows_NT)
   host_os = windows
   SHELL = cmd
@@ -22,7 +21,6 @@ else
     LD = ld
   endif
 endif
-
 
 # set flags for compiler and linker (Bits and Architecture)
 ifeq ($(arch),x86_64)
@@ -40,10 +38,10 @@ else ifeq ($(arch),arm32)
 endif
 
 # make sure host OS is supported!
-ifndef ($host_os)
+ifndef host_os
   $(warning host_os not defined! targets will not compile!)
 endif
-ifndef ($arch)
+ifndef arch
   $(warning arch not defined! please set target architecture)
 endif
 
@@ -52,10 +50,9 @@ all: os-image.bin
 os-image.bin: x86-boot/boot-sect.bin kitty.bin #TODO add fs.bin (file system)
 ifeq ($(host_os),windows)
 	copy /B x86-boot\boot-sect.bin+kitty.bin /B os-image.bin
-else ifeq ($(host_os), linux)
+else ifeq ($(host_os),linux)
 	cat $^ > os-image.bin
 endif
-
 
 kitty.bin: kernel/kitty.o ${OBJ}
 	${LD} ${LDFLAGS} -o $@ -Ttext 0x8000 $^ --oformat binary --entry kitty
@@ -88,7 +85,7 @@ endif
 debug: os-image.bin kitty.elf # TODO needs work, change it so that a variable is added for break points
 #ifeq ($(host_os),windows)
 	qemu-system-x86_64 -s -S -fda os-image.bin
-#else ifeq ($(host_os), linux)
+#else ifeq ($(host_os),linux)
 #	qemu-system-x86_64 -s -S -fda os-image.bin &
 #endif
 ##${GDB} -ex "target remote localhost:1234" -ex "symbol-file kernel.elf" -ex "break *0x7c00" -ex "break main" -ex "c" -ex "c"
@@ -113,7 +110,7 @@ endif
 clean:
 ifeq ($(host_os),windows)
 	del /S *.bin *.o *.elf
-else ifeq ($(host_os), linux)
+else ifeq ($(host_os),linux)
 	rm -rf *.bin *.o *.elf
 	rm -rf kernel/*.o x86-boot/*.bin x86-boot/*.o
 endif
